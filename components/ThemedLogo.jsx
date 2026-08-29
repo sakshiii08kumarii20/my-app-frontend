@@ -1,12 +1,18 @@
-import {Image, useColorScheme} from 'react-native'
-import DarkLogo from '../assets/img/logo.png'
-import LightLogo from '../assets/img/logo.png'
+import { Image } from 'react-native'
+import { useAppTheme } from '../context/ThemeContext'
+
+import Logo from '../assets/img/logo.png'
 
 const ThemedLogo = (props) => {
-  const colorScheme = useColorScheme()
-  const logoSource = colorScheme === 'dark' ? DarkLogo : LightLogo
+    const { colorScheme } = useAppTheme()
 
-  return (
-  <Image source={logoSource} {...props} />
-)}
+    return (
+        <Image
+            source={Logo}
+            resizeMode="contain"
+            {...props}
+        />
+    )
+}
+
 export default ThemedLogo

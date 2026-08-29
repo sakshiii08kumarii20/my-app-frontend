@@ -4,18 +4,18 @@ import {
     Text,
     StyleSheet,
     TouchableOpacity,
-    useColorScheme,
     Alert,
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
-import { Colors } from '../constans/Colors'
+import Colors from '../constans/Colors'
 import ThemeView from '../components/ThemeView'
-import { fetchCustomers } from '../constans/api'
+import { useAppTheme } from '../context/ThemeContext'
+import { loginUser } from '../constans/api'
 
 const Login = () => {
-    const colorScheme = useColorScheme()
+    const { colorScheme } = useAppTheme()
     const theme = Colors[colorScheme] ?? Colors.light
 
     const router = useRouter()
@@ -38,37 +38,24 @@ const Login = () => {
         try {
             setLoading(true)
 
-            const customers = await fetchCustomers()
+            const customer = await loginUser({
+                email: email.trim(),
+                password,
+            })
 
-            const customer = customers.find(
-                (item) =>
-                    item.email?.toLowerCase() === email.trim().toLowerCase()
-            )
-
-            if (!customer) {
-                Alert.alert(
-                    'Login Failed',
-                    'No customer found with this email.'
-                )
-                return
-            }
-
-            // Store the logged-in customer's ID
-            await AsyncStorage.setItem(
-                'customerId',
-                customer.id
-            )
-
-            console.log('Logged in customer:', customer)
+            await AsyncStorage.multiSet([
+                ['customerId', String(customer.id)],
+                ['customerEmail', customer.email || ''],
+                ['customerPhone', customer.phone || ''],
+                ['customerName', customer.name || ''],
+            ])
 
             router.replace('/profile')
 
         } catch (error) {
-            console.error('Login error:', error)
-
             Alert.alert(
-                'Error',
-                'Something went wrong while logging in.'
+                'Login Failed',
+                error.message || 'Invalid email or password'
             )
         } finally {
             setLoading(false)
@@ -78,13 +65,29 @@ const Login = () => {
     return (
         <ThemeView style={styles.container}>
 
-            <Text style={[styles.title, { color: theme.title }]}>
-                Login
+            {/* Header */}
+            <Text
+                style={[
+                    styles.title,
+                    { color: theme.heading },
+                ]}
+            >
+                Welcome Back
             </Text>
 
+            <Text
+                style={[
+                    styles.subtitle,
+                    { color: theme.textSecondary },
+                ]}
+            >
+                Log in to continue shopping
+            </Text>
+
+            {/* Email */}
             <TextInput
                 placeholder="Email"
-                placeholderTextColor={theme.subtitle}
+                placeholderTextColor={theme.inputPlaceholder}
                 value={email}
                 onChangeText={setEmail}
                 autoCapitalize="none"
@@ -92,39 +95,74 @@ const Login = () => {
                 style={[
                     styles.input,
                     {
-                        backgroundColor: theme.uiBackground,
-                        borderColor: theme.border,
-                        color: theme.text,
+                        backgroundColor: theme.inputBackground,
+                        borderColor: theme.inputBorder,
+                        color: theme.inputText,
                     },
                 ]}
             />
 
+            {/* Password */}
             <TextInput
                 placeholder="Password"
-                placeholderTextColor={theme.subtitle}
+                placeholderTextColor={theme.inputPlaceholder}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
                 style={[
                     styles.input,
                     {
-                        backgroundColor: theme.uiBackground,
-                        borderColor: theme.border,
-                        color: theme.text,
+                        backgroundColor: theme.inputBackground,
+                        borderColor: theme.inputBorder,
+                        color: theme.inputText,
                     },
                 ]}
             />
 
+            {/* Login Button */}
             <TouchableOpacity
                 style={[
                     styles.button,
-                    { backgroundColor: Colors.primary },
+                    {
+                        backgroundColor: theme.buttonPrimary,
+                    },
                 ]}
                 onPress={handleLogin}
                 disabled={loading}
             >
-                <Text style={styles.buttonText}>
+                <Text
+                    style={[
+                        styles.buttonText,
+                        {
+                            color: theme.buttonPrimaryText,
+                        },
+                    ]}
+                >
                     {loading ? 'Logging in...' : 'Log In'}
+                </Text>
+            </TouchableOpacity>
+
+            {/* Signup */}
+            <TouchableOpacity
+                onPress={() => router.push('/signup')}
+                style={styles.signupContainer}
+            >
+                <Text
+                    style={[
+                        styles.signupText,
+                        { color: theme.textSecondary },
+                    ]}
+                >
+                    Don't have an account?{' '}
+                </Text>
+
+                <Text
+                    style={[
+                        styles.signupLink,
+                        { color: theme.primary },
+                    ]}
+                >
+                    Sign Up
                 </Text>
             </TouchableOpacity>
 
@@ -139,32 +177,55 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 20,
+        padding: 24,
     },
 
     title: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        marginBottom: 20,
+        fontSize: 28,
+        fontWeight: '800',
+        marginBottom: 6,
+    },
+
+    subtitle: {
+        fontSize: 14,
+        marginBottom: 28,
     },
 
     input: {
         width: '100%',
         borderWidth: 1,
-        borderRadius: 8,
-        padding: 12,
-        marginBottom: 12,
+        borderRadius: 12,
+        paddingHorizontal: 15,
+        paddingVertical: 14,
+        marginBottom: 14,
+        fontSize: 15,
     },
 
     button: {
-        padding: 14,
-        borderRadius: 8,
         width: '100%',
+        paddingVertical: 15,
+        borderRadius: 12,
         alignItems: 'center',
+        marginTop: 6,
     },
 
     buttonText: {
-        color: '#fff',
-        fontWeight: 'bold',
+        fontSize: 15,
+        fontWeight: '700',
+    },
+
+    signupContainer: {
+        flexDirection: 'row',
+        marginTop: 22,
+        alignItems: 'center',
+    },
+
+    signupText: {
+        fontSize: 14,
+    },
+
+    signupLink: {
+        fontSize: 14,
+        fontWeight: '700',
     },
 })

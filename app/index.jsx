@@ -1,303 +1,1810 @@
 import { useState, useEffect } from 'react'
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, useColorScheme, Dimensions, ActivityIndicator } from 'react-native'
+
+import {
+    StyleSheet,
+    Text,
+    View,
+    ScrollView,
+    TouchableOpacity,
+    Dimensions,
+    ActivityIndicator,
+} from 'react-native'
+
+import { useAppTheme } from '../context/ThemeContext'
 import { Link, useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
-import { Colors } from '../constans/Colors'
+
+import Colors from '../constans/Colors'
+
 import ThemeView from '../components/ThemeView'
 import ProductCard from '../components/ProductCard'
+import BottomNavBar from '../components/BottomNavBar'
+
 import { fetchProducts } from '../constans/api'
 import { useCart } from '../context/CartContext'
 
 const { width } = Dimensions.get('window')
 
+
+// ============================================================
+// CATEGORIES
+// ============================================================
+
 const CATEGORIES = [
-    { name: 'Milk', icon: 'water-outline' },
-    { name: 'Curd & Yogurt', icon: 'nutrition-outline' },
-    { name: 'Paneer', icon: 'square-outline' },
-    { name: 'Ghee & Butter', icon: 'flame-outline' },
-    { name: 'Cheese', icon: 'pizza-outline' },
-    { name: 'Buttermilk', icon: 'cafe-outline' },
-    { name: 'Ice Cream', icon: 'ice-cream-outline' },
+    {
+        name: 'Women',
+        icon: 'woman-outline',
+    },
+    {
+        name: 'Men',
+        icon: 'man-outline',
+    },
+    {
+        name: 'Shoes',
+        icon: 'footsteps-outline',
+    },
+    {
+        name: 'Bags',
+        icon: 'briefcase-outline',
+    },
+    {
+        name: 'Accessories',
+        icon: 'watch-outline',
+    },
+    {
+        name: 'Kids',
+        icon: 'happy-outline',
+    },
 ]
+
+
+// ============================================================
+// BANNERS
+// ============================================================
 
 const BANNERS = [
-    { id: 'b1', title: 'Farm Fresh Milk', subtitle: 'Delivered chilled, every morning' },
-    { id: 'b2', title: 'Subscribe & Save', subtitle: 'Get 10% off on daily milk delivery' },
-    { id: 'b3', title: 'Pure Cow Ghee', subtitle: 'Traditionally made, straight from the farm' },
+    {
+        id: 'b1',
+        label: 'NEW COLLECTION',
+        title: 'Elevate Your Style',
+        subtitle: 'Discover the latest looks for every occasion',
+        button: 'Shop Collection',
+        icon: 'sparkles-outline',
+    },
+
+    {
+        id: 'b2',
+        label: 'LIMITED OFFER',
+        title: 'Up to 50% OFF',
+        subtitle: 'Fresh styles. Better prices. Limited time.',
+        button: 'Shop Sale',
+        icon: 'pricetag-outline',
+    },
+
+    {
+        id: 'b3',
+        label: 'TRENDING NOW',
+        title: 'Step Into Style',
+        subtitle: 'Explore shoes made for every move',
+        button: 'Explore Shoes',
+        icon: 'footsteps-outline',
+    },
 ]
 
-const SectionHeader = ({ title, sub, theme }) => (
-    <View style={styles.sectionHeader}>
-        <View style={styles.sectionHeaderLeft}>
-            <View style={[styles.sectionDot, { backgroundColor: Colors.primary }]} />
-            <View>
-                <Text style={[styles.sectionTitle, { color: theme.title }]}>{title}</Text>
-                {sub ? <Text style={[styles.sectionSub, { color: theme.subtitle }]}>{sub}</Text> : null}
+
+// ============================================================
+// SECTION HEADER
+// ============================================================
+
+const SectionHeader = ({
+    title,
+    sub,
+    theme,
+    onPress,
+}) => {
+    return (
+        <View style={styles.sectionHeader}>
+
+            <View style={styles.sectionHeaderLeft}>
+
+                <Text
+                    style={[
+                        styles.sectionTitle,
+                        {
+                            color: theme.title,
+                        },
+                    ]}
+                >
+                    {title}
+                </Text>
+
+                {sub ? (
+                    <Text
+                        style={[
+                            styles.sectionSub,
+                            {
+                                color: theme.subtitle,
+                            },
+                        ]}
+                    >
+                        {sub}
+                    </Text>
+                ) : null}
+
             </View>
+
+            <TouchableOpacity
+                onPress={onPress}
+                activeOpacity={0.8}
+                style={[
+                    styles.seeAllBtn,
+                    {
+                        backgroundColor: theme.card,
+                        borderColor: theme.border,
+                    },
+                ]}
+            >
+
+                <Text
+                    style={[
+                        styles.seeAllText,
+                        {
+                            color: theme.title,
+                        },
+                    ]}
+                >
+                    See all
+                </Text>
+
+                <Ionicons
+                    name="arrow-forward"
+                    size={14}
+                    color={theme.title}
+                />
+
+            </TouchableOpacity>
+
         </View>
-        <TouchableOpacity style={[styles.seeAllBtn, { backgroundColor: theme.uiBackground }]}>
-            <Ionicons name="arrow-forward" size={16} color={Colors.primary} />
-        </TouchableOpacity>
-    </View>
-)
+    )
+}
+
+
+// ============================================================
+// HOME
+// ============================================================
 
 const Home = () => {
-    const colorScheme = useColorScheme()
-    const theme = Colors[colorScheme] ?? Colors.light
-    const [activeCategory, setActiveCategory] = useState('Milk')
+
+    const { colorScheme } = useAppTheme()
+
+    /*
+     * IMPORTANT:
+     * This protects the app even if ThemeContext temporarily
+     * returns undefined.
+     */
+
+    const currentScheme =
+        colorScheme === 'dark'
+            ? 'dark'
+            : 'light'
+
+    const theme =
+        Colors[currentScheme] || Colors.light
+
     const { cartCount } = useCart()
+
     const router = useRouter()
 
-    const [products, setProducts] = useState([])
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState(false)
+    const [activeCategory, setActiveCategory] =
+        useState('Women')
+
+    const [products, setProducts] =
+        useState([])
+
+    const [loading, setLoading] =
+        useState(true)
+
+    const [error, setError] =
+        useState(false)
+
+
+    // ========================================================
+    // LOAD PRODUCTS
+    // ========================================================
 
     useEffect(() => {
+
+        let mounted = true
+
         fetchProducts()
-            .then(setProducts)
-            .catch(() => setError(true))
-            .finally(() => setLoading(false))
+            .then((data) => {
+
+                if (!mounted) return
+
+                setProducts(
+                    Array.isArray(data)
+                        ? data
+                        : []
+                )
+
+            })
+            .catch((err) => {
+
+                console.log(
+                    'HOME PRODUCTS ERROR:',
+                    err
+                )
+
+                if (mounted) {
+                    setError(true)
+                }
+
+            })
+            .finally(() => {
+
+                if (mounted) {
+                    setLoading(false)
+                }
+
+            })
+
+        return () => {
+            mounted = false
+        }
+
     }, [])
 
-    const DEALS = products.slice(0, 4)
-    const RECOMMENDED = products.slice(4, 8)
+
+    // ========================================================
+    // PRODUCT SECTIONS
+    // ========================================================
+
+    const NEW_ARRIVALS =
+        products.slice(0, 4)
+
+    const TRENDING =
+        products.slice(4, 8)
+
+
+    // ========================================================
+    // LOADING
+    // ========================================================
 
     if (loading) {
+
         return (
-            <ThemeView style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={Colors.primary} />
-            </ThemeView>
-        )
-    }
+            <ThemeView
+                style={[
+                    styles.loadingContainer,
+                    {
+                        backgroundColor:
+                            theme.background,
+                    },
+                ]}
+            >
 
-    if (error) {
-        return (
-            <ThemeView style={styles.loadingContainer}>
-                <Ionicons name="cloud-offline-outline" size={40} color={theme.subtitle} />
-                <Text style={{ color: theme.text, marginTop: 10 }}>Couldn't load products. Check your connection.</Text>
-            </ThemeView>
-        )
-    }
+                <View
+                    style={[
+                        styles.loadingIcon,
+                        {
+                            backgroundColor:
+                                theme.accentLight,
+                        },
+                    ]}
+                >
 
-    return (
-        <ThemeView style={{ flex: 1 }}>
-            <ScrollView showsVerticalScrollIndicator={false}>
+                    <Ionicons
+                        name="bag-handle-outline"
+                        size={25}
+                        color={theme.accent}
+                    />
 
-                {/* Curved hero */}
-                <View style={[styles.hero, { backgroundColor: Colors.navy }]}>
-                    <View style={styles.heroTopRow}>
-                        <View>
-                            <Text style={styles.heroGreeting}>Deliver to</Text>
-                            <View style={styles.heroLocationRow}>
-                                <Ionicons name="location" size={14} color={Colors.gold} />
-                                <Text style={styles.heroLocation}>Home - 500001</Text>
-                                <Ionicons name="chevron-down" size={12} color="#fff" />
-                            </View>
-                        </View>
-                        <Link href="/cart" asChild>
-                            <TouchableOpacity style={styles.cartBtn}>
-                                <Ionicons name="cart-outline" size={22} color="#fff" />
-                                {cartCount > 0 && (
-                                    <View style={[styles.cartBadge, { backgroundColor: Colors.deal }]}>
-                                        <Text style={styles.cartBadgeText}>{cartCount}</Text>
-                                    </View>
-                                )}
-                            </TouchableOpacity>
-                        </Link>
-                    </View>
-                    <Text style={styles.heroHeadline}>Farm fresh,{'\n'}delivered daily 🥛</Text>
                 </View>
 
-                {/* Floating search capsule */}
-                <TouchableOpacity
-                    style={[styles.searchCapsule, { backgroundColor: theme.card, shadowColor: theme.shadow }]}
-                    activeOpacity={0.8}
-                    onPress={() => router.push('/search')}
+                <ActivityIndicator
+                    size="small"
+                    color={theme.primary}
+                    style={styles.loader}
+                />
+
+                <Text
+                    style={[
+                        styles.loadingText,
+                        {
+                            color:
+                                theme.subtitle,
+                        },
+                    ]}
                 >
-                    <Ionicons name="search" size={18} color={theme.subtitle} />
-                    <Text style={{ flex: 1, color: theme.subtitle, fontSize: 14 }}>Search milk, curd, ghee and more</Text>
-                    <View style={[styles.searchDivider, { backgroundColor: theme.border }]} />
-                    <Ionicons name="options-outline" size={18} color={Colors.primary} />
+                    Curating your styles...
+                </Text>
+
+            </ThemeView>
+        )
+    }
+
+
+    // ========================================================
+    // ERROR
+    // ========================================================
+
+    if (error) {
+
+        return (
+            <ThemeView
+                style={[
+                    styles.loadingContainer,
+                    {
+                        backgroundColor:
+                            theme.background,
+                    },
+                ]}
+            >
+
+                <View
+                    style={[
+                        styles.errorIcon,
+                        {
+                            backgroundColor:
+                                theme.errorLight,
+                        },
+                    ]}
+                >
+
+                    <Ionicons
+                        name="cloud-offline-outline"
+                        size={32}
+                        color={theme.error}
+                    />
+
+                </View>
+
+                <Text
+                    style={[
+                        styles.errorText,
+                        {
+                            color:
+                                theme.title,
+                        },
+                    ]}
+                >
+                    Couldn't load products
+                </Text>
+
+                <Text
+                    style={[
+                        styles.errorSubText,
+                        {
+                            color:
+                                theme.subtitle,
+                        },
+                    ]}
+                >
+                    Please check your connection
+                    and try again.
+                </Text>
+
+                <TouchableOpacity
+                    activeOpacity={0.85}
+                    onPress={() => {
+
+                        setError(false)
+                        setLoading(true)
+
+                        fetchProducts()
+                            .then((data) => {
+                                setProducts(
+                                    Array.isArray(data)
+                                        ? data
+                                        : []
+                                )
+                            })
+                            .catch(() => {
+                                setError(true)
+                            })
+                            .finally(() => {
+                                setLoading(false)
+                            })
+
+                    }}
+                    style={[
+                        styles.retryButton,
+                        {
+                            backgroundColor:
+                                theme.primary,
+                        },
+                    ]}
+                >
+
+                    <Text
+                        style={[
+                            styles.retryButtonText,
+                            {
+                                color:
+                                    theme.buttonPrimaryText,
+                            },
+                        ]}
+                    >
+                        Try Again
+                    </Text>
+
                 </TouchableOpacity>
 
-                {/* Category pills */}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryRow}>
-                    {CATEGORIES.map((cat) => {
-                        const active = cat.name === activeCategory
-                        return (
+            </ThemeView>
+        )
+    }
+
+
+    // ========================================================
+    // MAIN UI
+    // ========================================================
+
+    return (
+        <ThemeView
+            style={[
+                styles.container,
+                {
+                    backgroundColor:
+                        theme.background,
+                },
+            ]}
+        >
+
+            <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={
+                    styles.scrollContent
+                }
+            >
+
+                {/* =================================================
+                    HEADER
+                ================================================= */}
+
+                <View style={styles.header}>
+
+                    <View>
+
+                        <Text
+                            style={[
+                                styles.brandSmall,
+                                {
+                                    color:
+                                        theme.accentDark,
+                                },
+                            ]}
+                        >
+                            WELCOME BACK
+                        </Text>
+
+                        <Text
+                            style={[
+                                styles.brandTitle,
+                                {
+                                    color:
+                                        theme.title,
+                                },
+                            ]}
+                        >
+                            Discover your style.
+                        </Text>
+
+                    </View>
+
+
+                    <View
+                        style={styles.headerActions}
+                    >
+
+                        {/* SEARCH */}
+
+                        <TouchableOpacity
+                            activeOpacity={0.8}
+                            onPress={() =>
+                                router.push('/search')
+                            }
+                            style={[
+                                styles.headerButton,
+                                {
+                                    backgroundColor:
+                                        theme.card,
+                                    borderColor:
+                                        theme.border,
+                                },
+                            ]}
+                        >
+
+                            <Ionicons
+                                name="search-outline"
+                                size={21}
+                                color={
+                                    theme.headerIcon
+                                }
+                            />
+
+                        </TouchableOpacity>
+
+
+                        {/* CART */}
+
+                        <Link
+                            href="/cart"
+                            asChild
+                        >
+
                             <TouchableOpacity
-                                key={cat.name}
-                                onPress={() => setActiveCategory(cat.name)}
+                                activeOpacity={0.8}
                                 style={[
-                                    styles.categoryPill,
+                                    styles.headerButton,
                                     {
-                                        backgroundColor: active ? Colors.primary : theme.card,
-                                        borderColor: active ? Colors.primary : theme.border,
+                                        backgroundColor:
+                                            theme.card,
+                                        borderColor:
+                                            theme.border,
                                     },
                                 ]}
                             >
-                                <Ionicons name={cat.icon} size={15} color={active ? '#fff' : Colors.primary} />
-                                <Text style={{ color: active ? '#fff' : theme.text, fontSize: 13, fontWeight: '600' }}>
-                                    {cat.name}
-                                </Text>
+
+                                <Ionicons
+                                    name="bag-outline"
+                                    size={21}
+                                    color={
+                                        theme.headerIcon
+                                    }
+                                />
+
+                                {cartCount > 0 && (
+                                    <View
+                                        style={[
+                                            styles.cartBadge,
+                                            {
+                                                backgroundColor:
+                                                    theme.accentDark,
+                                            },
+                                        ]}
+                                    >
+
+                                        <Text
+                                            style={
+                                                styles.cartBadgeText
+                                            }
+                                        >
+                                            {cartCount}
+                                        </Text>
+
+                                    </View>
+                                )}
+
                             </TouchableOpacity>
-                        )
-                    })}
-                </ScrollView>
 
-                {/* Banner */}
-                <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={{ marginTop: 4 }}>
-                    {BANNERS.map((b) => (
-                        <View key={b.id} style={[styles.banner, { width: width - 32, marginLeft: 16, backgroundColor: theme.card, borderColor: theme.border }]}>
-                            <View style={[styles.bannerAccent, { backgroundColor: Colors.gold }]} />
-                            <View style={[styles.bannerAccent2, { backgroundColor: Colors.teal }]} />
-                            <Text style={[styles.bannerTitle, { color: theme.title }]}>{b.title}</Text>
-                            <Text style={[styles.bannerSubtitle, { color: theme.subtitle }]}>{b.subtitle}</Text>
-                            <View style={[styles.bannerCta, { backgroundColor: Colors.primary }]}>
-                                <Text style={styles.bannerCtaText}>Shop Now</Text>
-                            </View>
-                        </View>
-                    ))}
-                </ScrollView>
+                        </Link>
 
-                {/* Today's Fresh Picks */}
-                {DEALS.length > 0 && (
-                    <View style={styles.section}>
-                        <SectionHeader title="Today's Fresh Picks" sub="Delivered before 7 AM" theme={theme} />
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
-                            {DEALS.map((item) => (
-                                <Link href={`/product/${item.id}`} asChild key={item.id}>
-                                    <TouchableOpacity style={{ marginRight: 14 }}>
-                                        <ProductCard item={item} theme={theme} />
-                                    </TouchableOpacity>
-                                </Link>
-                            ))}
-                        </ScrollView>
                     </View>
-                )}
 
-                {/* Recommended grid */}
-                {RECOMMENDED.length > 0 && (
-                    <View style={styles.section}>
-                        <SectionHeader title="Recommended for you" theme={theme} />
-                        <View style={styles.grid}>
-                            {RECOMMENDED.map((item) => (
-                                <Link href={`/product/${item.id}`} asChild key={item.id}>
-                                    <TouchableOpacity>
-                                        <ProductCard item={item} theme={theme} cardWidth={(width - 44) / 2} />
-                                    </TouchableOpacity>
-                                </Link>
-                            ))}
-                        </View>
-                    </View>
-                )}
-
-                {products.length === 0 && (
-                    <View style={styles.loadingContainer}>
-                        <Text style={{ color: theme.subtitle }}>No products available right now.</Text>
-                    </View>
-                )}
-
-                <View style={styles.footerLinks}>
-                    <Link href="/about" style={[styles.link, { color: Colors.primary }]}>About Us</Link>
-                    <Link href="/contact" style={[styles.link, { color: Colors.primary }]}>Contact Us</Link>
                 </View>
 
+
+                {/* =================================================
+                    HERO
+                ================================================= */}
+
+                <View
+                    style={[
+                        styles.hero,
+                        {
+                            backgroundColor:
+                                theme.primaryDark,
+                        },
+                    ]}
+                >
+
+                    <View
+                        style={
+                            styles.heroContent
+                        }
+                    >
+
+                        <Text
+                            style={
+                                styles.heroLabel
+                            }
+                        >
+                            NEW SEASON
+                        </Text>
+
+                        <Text
+                            style={
+                                styles.heroTitle
+                            }
+                        >
+                            Find your
+                            {'\n'}
+                            perfect look.
+                        </Text>
+
+                        <Text
+                            style={
+                                styles.heroSubtitle
+                            }
+                        >
+                            New styles have arrived.
+                            {'\n'}
+                            Discover something
+                            you'll love.
+                        </Text>
+
+                        <TouchableOpacity
+                            activeOpacity={0.85}
+                            onPress={() =>
+                                router.push(
+                                    '/categories'
+                                )
+                            }
+                            style={[
+                                styles.heroButton,
+                                {
+                                    backgroundColor:
+                                        theme.accentLight,
+                                },
+                            ]}
+                        >
+
+                            <Text
+                                style={[
+                                    styles.heroButtonText,
+                                    {
+                                        color:
+                                            theme.primaryDark,
+                                    },
+                                ]}
+                            >
+                                Shop Now
+                            </Text>
+
+                            <Ionicons
+                                name="arrow-forward"
+                                size={16}
+                                color={
+                                    theme.primaryDark
+                                }
+                            />
+
+                        </TouchableOpacity>
+
+                    </View>
+
+
+                    {/* DECORATION */}
+
+                    <View
+                        style={[
+                            styles.heroCircleOne,
+                            {
+                                backgroundColor:
+                                    'rgba(255,255,255,0.04)',
+                            },
+                        ]}
+                    />
+
+                    <View
+                        style={[
+                            styles.heroCircleTwo,
+                            {
+                                backgroundColor:
+                                    'rgba(201,143,143,0.10)',
+                            },
+                        ]}
+                    />
+
+                    <View
+                        style={
+                            styles.heroFashionIcon
+                        }
+                    >
+
+                        <Ionicons
+                            name="shirt-outline"
+                            size={88}
+                            color="rgba(255,255,255,0.12)"
+                        />
+
+                    </View>
+
+                </View>
+
+
+                {/* =================================================
+                    CATEGORIES
+                ================================================= */}
+
+                <View
+                    style={styles.categorySection}
+                >
+
+                    <SectionHeader
+                        title="Shop by category"
+                        sub="Find what fits your style"
+                        theme={theme}
+                        onPress={() =>
+                            router.push(
+                                '/categories'
+                            )
+                        }
+                    />
+
+
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={
+                            false
+                        }
+                        contentContainerStyle={
+                            styles.categoryScroll
+                        }
+                    >
+
+                        {CATEGORIES.map(
+                            (category) => {
+
+                                const active =
+                                    category.name ===
+                                    activeCategory
+
+                                return (
+                                    <TouchableOpacity
+                                        key={
+                                            category.name
+                                        }
+                                        activeOpacity={
+                                            0.8
+                                        }
+                                        onPress={() =>
+                                            setActiveCategory(
+                                                category.name
+                                            )
+                                        }
+                                        style={[
+                                            styles.categoryCard,
+                                            {
+                                                backgroundColor:
+                                                    active
+                                                        ? theme.primary
+                                                        : theme.card,
+
+                                                borderColor:
+                                                    active
+                                                        ? theme.primary
+                                                        : theme.border,
+                                            },
+                                        ]}
+                                    >
+
+                                        <View
+                                            style={[
+                                                styles.categoryIcon,
+                                                {
+                                                    backgroundColor:
+                                                        active
+                                                            ? 'rgba(255,255,255,0.12)'
+                                                            : theme.uiBackground,
+                                                },
+                                            ]}
+                                        >
+
+                                            <Ionicons
+                                                name={
+                                                    category.icon
+                                                }
+                                                size={22}
+                                                color={
+                                                    active
+                                                        ? '#FFFFFF'
+                                                        : theme.title
+                                                }
+                                            />
+
+                                        </View>
+
+
+                                        <Text
+                                            style={[
+                                                styles.categoryName,
+                                                {
+                                                    color:
+                                                        active
+                                                            ? '#FFFFFF'
+                                                            : theme.title,
+                                                },
+                                            ]}
+                                        >
+                                            {
+                                                category.name
+                                            }
+                                        </Text>
+
+                                    </TouchableOpacity>
+                                )
+                            }
+                        )}
+
+                    </ScrollView>
+
+                </View>
+
+
+                {/* =================================================
+                    PROMOTIONAL BANNERS
+                ================================================= */}
+
+                <ScrollView
+                    horizontal
+                    pagingEnabled
+                    showsHorizontalScrollIndicator={
+                        false
+                    }
+                    style={styles.bannerScroll}
+                >
+
+                    {BANNERS.map(
+                        (banner) => (
+
+                            <View
+                                key={
+                                    banner.id
+                                }
+                                style={[
+                                    styles.banner,
+                                    {
+                                        width:
+                                            width -
+                                            32,
+                                        backgroundColor:
+                                            theme.primary,
+                                    },
+                                ]}
+                            >
+
+                                <View
+                                    style={
+                                        styles.bannerContent
+                                    }
+                                >
+
+                                    <Text
+                                        style={[
+                                            styles.bannerLabel,
+                                            {
+                                                color:
+                                                    theme.accentLight,
+                                            },
+                                        ]}
+                                    >
+                                        {
+                                            banner.label
+                                        }
+                                    </Text>
+
+                                    <Text
+                                        style={
+                                            styles.bannerTitle
+                                        }
+                                    >
+                                        {
+                                            banner.title
+                                        }
+                                    </Text>
+
+                                    <Text
+                                        style={
+                                            styles.bannerSubtitle
+                                        }
+                                    >
+                                        {
+                                            banner.subtitle
+                                        }
+                                    </Text>
+
+                                    <TouchableOpacity
+                                        activeOpacity={
+                                            0.85
+                                        }
+                                        onPress={() =>
+                                            router.push(
+                                                '/categories'
+                                            )
+                                        }
+                                        style={[
+                                            styles.bannerButton,
+                                            {
+                                                backgroundColor:
+                                                    theme.accent,
+                                            },
+                                        ]}
+                                    >
+
+                                        <Text
+                                            style={
+                                                styles.bannerButtonText
+                                            }
+                                        >
+                                            {
+                                                banner.button
+                                            }
+                                        </Text>
+
+                                        <Ionicons
+                                            name="arrow-forward"
+                                            size={14}
+                                            color="#FFFFFF"
+                                        />
+
+                                    </TouchableOpacity>
+
+                                </View>
+
+
+                                <View
+                                    style={
+                                        styles.bannerDecoration
+                                    }
+                                >
+
+                                    <Ionicons
+                                        name={
+                                            banner.icon
+                                        }
+                                        size={95}
+                                        color="rgba(255,255,255,0.10)"
+                                    />
+
+                                </View>
+
+                            </View>
+
+                        )
+                    )}
+
+                </ScrollView>
+
+
+                {/* =================================================
+                    NEW ARRIVALS
+                ================================================= */}
+
+                {NEW_ARRIVALS.length > 0 && (
+
+                    <View
+                        style={styles.section}
+                    >
+
+                        <SectionHeader
+                            title="New arrivals"
+                            sub="Fresh styles just for you"
+                            theme={theme}
+                            onPress={() =>
+                                router.push(
+                                    '/categories'
+                                )
+                            }
+                        />
+
+                        <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={
+                                false
+                            }
+                            contentContainerStyle={
+                                styles.productScroll
+                            }
+                        >
+
+                            {NEW_ARRIVALS.map(
+                                (item) => (
+
+                                    <Link
+                                        key={
+                                            item.id
+                                        }
+                                        href={`/product/${item.id}`}
+                                        asChild
+                                    >
+
+                                        <TouchableOpacity
+                                            activeOpacity={
+                                                0.9
+                                            }
+                                            style={
+                                                styles.productItem
+                                            }
+                                        >
+
+                                            <ProductCard
+                                                item={item}
+                                                theme={
+                                                    theme
+                                                }
+                                            />
+
+                                        </TouchableOpacity>
+
+                                    </Link>
+
+                                )
+                            )}
+
+                        </ScrollView>
+
+                    </View>
+                )}
+
+
+                {/* =================================================
+                    TRENDING
+                ================================================= */}
+
+                {TRENDING.length > 0 && (
+
+                    <View
+                        style={styles.section}
+                    >
+
+                        <SectionHeader
+                            title="Trending now"
+                            sub="What everyone is loving"
+                            theme={theme}
+                            onPress={() =>
+                                router.push(
+                                    '/categories'
+                                )
+                            }
+                        />
+
+
+                        <View
+                            style={styles.grid}
+                        >
+
+                            {TRENDING.map(
+                                (item) => (
+
+                                    <Link
+                                        key={
+                                            item.id
+                                        }
+                                        href={`/product/${item.id}`}
+                                        asChild
+                                    >
+
+                                        <TouchableOpacity
+                                            activeOpacity={
+                                                0.9
+                                            }
+                                            style={[
+                                                styles.gridItem,
+                                                {
+                                                    width:
+                                                        (width -
+                                                            48) /
+                                                        2,
+                                                },
+                                            ]}
+                                        >
+
+                                            <ProductCard
+                                                item={item}
+                                                theme={
+                                                    theme
+                                                }
+                                                cardWidth={
+                                                    (width -
+                                                        48) /
+                                                    2
+                                                }
+                                            />
+
+                                        </TouchableOpacity>
+
+                                    </Link>
+
+                                )
+                            )}
+
+                        </View>
+
+                    </View>
+                )}
+
+
+                {/* =================================================
+                    SALE STRIP
+                ================================================= */}
+
+                <TouchableOpacity
+                    activeOpacity={0.9}
+                    onPress={() =>
+                        router.push(
+                            '/categories'
+                        )
+                    }
+                    style={[
+                        styles.saleStrip,
+                        {
+                            backgroundColor:
+                                theme.primary,
+                        },
+                    ]}
+                >
+
+                    <View
+                        style={[
+                            styles.saleIcon,
+                            {
+                                backgroundColor:
+                                    'rgba(201,143,143,0.18)',
+                            },
+                        ]}
+                    >
+
+                        <Ionicons
+                            name="pricetag-outline"
+                            size={23}
+                            color={
+                                theme.accentLight
+                            }
+                        />
+
+                    </View>
+
+
+                    <View
+                        style={
+                            styles.saleTextContainer
+                        }
+                    >
+
+                        <Text
+                            style={
+                                styles.saleTitle
+                            }
+                        >
+                            SALE UP TO 50% OFF
+                        </Text>
+
+                        <Text
+                            style={
+                                styles.saleSubtitle
+                            }
+                        >
+                            Don't miss our
+                            limited-time offers.
+                        </Text>
+
+                    </View>
+
+
+                    <Ionicons
+                        name="arrow-forward"
+                        size={19}
+                        color="#FFFFFF"
+                    />
+
+                </TouchableOpacity>
+
+
+                {/* =================================================
+                    EMPTY
+                ================================================= */}
+
+                {products.length === 0 && (
+
+                    <View
+                        style={
+                            styles.emptyContainer
+                        }
+                    >
+
+                        <View
+                            style={[
+                                styles.emptyIcon,
+                                {
+                                    backgroundColor:
+                                        theme.uiBackground,
+                                },
+                            ]}
+                        >
+
+                            <Ionicons
+                                name="bag-outline"
+                                size={32}
+                                color={
+                                    theme.subtitle
+                                }
+                            />
+
+                        </View>
+
+                        <Text
+                            style={[
+                                styles.emptyTitle,
+                                {
+                                    color:
+                                        theme.title,
+                                },
+                            ]}
+                        >
+                            No products available
+                        </Text>
+
+                        <Text
+                            style={[
+                                styles.emptyText,
+                                {
+                                    color:
+                                        theme.subtitle,
+                                },
+                            ]}
+                        >
+                            Products will appear
+                            here once they are
+                            available.
+                        </Text>
+
+                    </View>
+                )}
+
+                <View
+                    style={{
+                        height: 30,
+                    }}
+                />
+
             </ScrollView>
+
+
+            {/* =====================================================
+                BOTTOM NAVIGATION
+            ===================================================== */}
+
+            <BottomNavBar />
+
         </ThemeView>
     )
 }
+
+
 export default Home
 
+
+// ============================================================
+// STYLES
+// ============================================================
+
 const styles = StyleSheet.create({
-    loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, padding: 30 },
+
+    container: {
+        flex: 1,
+    },
+
+    scrollContent: {
+        paddingBottom: 100,
+    },
+
+
+    // ========================================================
+    // LOADING
+    // ========================================================
+
+    loadingContainer: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 30,
+    },
+
+    loadingIcon: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 16,
+    },
+
+    loader: {
+        marginBottom: 10,
+    },
+
+    loadingText: {
+        fontSize: 13,
+        fontWeight: '500',
+    },
+
+
+    // ========================================================
+    // ERROR
+    // ========================================================
+
+    errorIcon: {
+        width: 70,
+        height: 70,
+        borderRadius: 35,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 16,
+    },
+
+    errorText: {
+        fontSize: 18,
+        fontWeight: '800',
+        marginTop: 4,
+    },
+
+    errorSubText: {
+        fontSize: 13,
+        textAlign: 'center',
+        marginTop: 7,
+        lineHeight: 19,
+    },
+
+    retryButton: {
+        marginTop: 20,
+        paddingHorizontal: 24,
+        paddingVertical: 12,
+        borderRadius: 22,
+    },
+
+    retryButtonText: {
+        fontSize: 12,
+        fontWeight: '800',
+    },
+
+
+    // ========================================================
+    // HEADER
+    // ========================================================
+
+    header: {
+        paddingHorizontal: 20,
+        paddingTop: 18,
+        paddingBottom: 17,
+
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+
+    brandSmall: {
+        fontSize: 10,
+        fontWeight: '800',
+        letterSpacing: 2,
+        marginBottom: 5,
+    },
+
+    brandTitle: {
+        fontSize: 22,
+        fontWeight: '800',
+        letterSpacing: -0.5,
+    },
+
+    headerActions: {
+        flexDirection: 'row',
+        gap: 9,
+    },
+
+    headerButton: {
+        width: 42,
+        height: 42,
+        borderRadius: 21,
+
+        alignItems: 'center',
+        justifyContent: 'center',
+
+        borderWidth: 1,
+    },
+
+    cartBadge: {
+        position: 'absolute',
+
+        top: -2,
+        right: -2,
+
+        minWidth: 17,
+        height: 17,
+
+        paddingHorizontal: 4,
+
+        borderRadius: 9,
+
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+
+    cartBadgeText: {
+        color: '#FFFFFF',
+        fontSize: 9,
+        fontWeight: '900',
+    },
+
+
+    // ========================================================
+    // HERO
+    // ========================================================
 
     hero: {
-        paddingTop: 14,
-        paddingHorizontal: 20,
-        paddingBottom: 46,
-        borderBottomLeftRadius: 36,
-        borderBottomRightRadius: 36,
+        marginHorizontal: 16,
+        marginTop: 4,
+
+        height: 245,
+
+        borderRadius: 28,
+
+        overflow: 'hidden',
+
+        position: 'relative',
     },
-    heroTopRow: {
+
+    heroContent: {
+        padding: 25,
+        zIndex: 2,
+    },
+
+    heroLabel: {
+        color: '#C8BEB6',
+        fontSize: 10,
+        fontWeight: '800',
+        letterSpacing: 2,
+        marginBottom: 10,
+    },
+
+    heroTitle: {
+        color: '#FFFFFF',
+        fontSize: 32,
+        fontWeight: '900',
+        lineHeight: 36,
+        letterSpacing: -1,
+    },
+
+    heroSubtitle: {
+        color: '#B9AEA6',
+        fontSize: 13,
+        lineHeight: 19,
+        marginTop: 10,
+    },
+
+    heroButton: {
+        marginTop: 18,
+
+        paddingVertical: 11,
+        paddingHorizontal: 17,
+
+        borderRadius: 22,
+
+        alignSelf: 'flex-start',
+
+        flexDirection: 'row',
+        alignItems: 'center',
+
+        gap: 8,
+    },
+
+    heroButtonText: {
+        fontSize: 12,
+        fontWeight: '800',
+    },
+
+    heroCircleOne: {
+        position: 'absolute',
+
+        width: 220,
+        height: 220,
+
+        borderRadius: 110,
+
+        right: -80,
+        top: -65,
+    },
+
+    heroCircleTwo: {
+        position: 'absolute',
+
+        width: 180,
+        height: 180,
+
+        borderRadius: 90,
+
+        right: -25,
+        bottom: -90,
+    },
+
+    heroFashionIcon: {
+        position: 'absolute',
+
+        right: 24,
+        top: 78,
+    },
+
+
+    // ========================================================
+    // SECTION HEADER
+    // ========================================================
+
+    sectionHeader: {
+        paddingHorizontal: 20,
+        marginBottom: 15,
+
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 18,
     },
-    heroGreeting: { color: '#C9E3F5', fontSize: 12 },
-    heroLocationRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-    heroLocation: { color: '#fff', fontSize: 13, fontWeight: '700' },
-    heroHeadline: { color: '#fff', fontSize: 24, fontWeight: '800', lineHeight: 30 },
 
-    cartBtn: { position: 'relative' },
-    cartBadge: {
-        position: 'absolute', top: -6, right: -8,
-        borderRadius: 8, width: 16, height: 16,
-        alignItems: 'center', justifyContent: 'center',
+    sectionHeaderLeft: {
+        flex: 1,
+        paddingRight: 10,
     },
-    cartBadgeText: { color: '#fff', fontSize: 10, fontWeight: '800' },
 
-    searchCapsule: {
+    sectionTitle: {
+        fontSize: 20,
+        fontWeight: '800',
+        letterSpacing: -0.5,
+    },
+
+    sectionSub: {
+        fontSize: 12,
+        marginTop: 4,
+    },
+
+    seeAllBtn: {
+        height: 34,
+
+        paddingHorizontal: 11,
+
+        borderRadius: 17,
+
+        borderWidth: 1,
+
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 10,
-        marginHorizontal: 20,
-        marginTop: -28,
-        borderRadius: 18,
-        paddingHorizontal: 16,
-        height: 54,
-        elevation: 6,
-        shadowOpacity: 0.15,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 4 },
-    },
-    searchDivider: { width: 1, height: 22 },
 
-    categoryRow: { paddingHorizontal: 20, paddingVertical: 20, gap: 10 },
-    categoryPill: {
-        flexDirection: 'row', alignItems: 'center', gap: 6,
-        borderWidth: 1, borderRadius: 20,
-        paddingVertical: 8, paddingHorizontal: 14,
-        marginRight: 4,
+        gap: 5,
+    },
+
+    seeAllText: {
+        fontSize: 11,
+        fontWeight: '700',
+    },
+
+
+    // ========================================================
+    // CATEGORIES
+    // ========================================================
+
+    categorySection: {
+        marginTop: 28,
+    },
+
+    categoryScroll: {
+        paddingHorizontal: 20,
+        gap: 10,
+    },
+
+    categoryCard: {
+        width: 91,
+        height: 100,
+
+        borderRadius: 20,
+
+        borderWidth: 1,
+
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+
+    categoryIcon: {
+        width: 46,
+        height: 46,
+
+        borderRadius: 23,
+
+        alignItems: 'center',
+        justifyContent: 'center',
+
+        marginBottom: 9,
+    },
+
+    categoryName: {
+        fontSize: 11,
+        fontWeight: '700',
+    },
+
+
+    // ========================================================
+    // BANNERS
+    // ========================================================
+
+    bannerScroll: {
+        marginTop: 28,
     },
 
     banner: {
-        height: 140,
-        borderRadius: 22,
-        borderWidth: 1,
-        padding: 20,
-        justifyContent: 'center',
-        overflow: 'hidden',
-    },
-    bannerAccent: {
-        position: 'absolute', width: 90, height: 90, borderRadius: 45,
-        top: -30, right: -20, opacity: 0.18,
-    },
-    bannerAccent2: {
-        position: 'absolute', width: 60, height: 60, borderRadius: 30,
-        bottom: -20, right: 40, opacity: 0.15,
-    },
-    bannerTitle: { fontSize: 19, fontWeight: '800', marginBottom: 4 },
-    bannerSubtitle: { fontSize: 13, marginBottom: 12 },
-    bannerCta: { alignSelf: 'flex-start', paddingVertical: 6, paddingHorizontal: 14, borderRadius: 14 },
-    bannerCtaText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+        height: 170,
 
-    section: { marginTop: 14 },
-    sectionHeader: {
-        flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-        paddingHorizontal: 20, marginBottom: 14,
+        marginLeft: 16,
+
+        borderRadius: 25,
+
+        overflow: 'hidden',
+
+        position: 'relative',
     },
-    sectionHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    sectionDot: { width: 8, height: 8, borderRadius: 4 },
-    sectionTitle: { fontSize: 16, fontWeight: '800' },
-    sectionSub: { fontSize: 11, marginTop: 1 },
-    seeAllBtn: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+
+    bannerContent: {
+        padding: 21,
+        zIndex: 2,
+    },
+
+    bannerLabel: {
+        fontSize: 9,
+        fontWeight: '900',
+        letterSpacing: 1.5,
+    },
+
+    bannerTitle: {
+        color: '#FFFFFF',
+        fontSize: 22,
+        fontWeight: '900',
+        marginTop: 7,
+    },
+
+    bannerSubtitle: {
+        color: '#C4BBB4',
+        fontSize: 12,
+        marginTop: 5,
+        maxWidth: 230,
+        lineHeight: 17,
+    },
+
+    bannerButton: {
+        marginTop: 13,
+
+        alignSelf: 'flex-start',
+
+        flexDirection: 'row',
+        alignItems: 'center',
+
+        gap: 6,
+
+        borderRadius: 18,
+
+        paddingVertical: 8,
+        paddingHorizontal: 13,
+    },
+
+    bannerButtonText: {
+        color: '#FFFFFF',
+        fontSize: 10,
+        fontWeight: '800',
+    },
+
+    bannerDecoration: {
+        position: 'absolute',
+        right: 25,
+        top: 38,
+    },
+
+
+    // ========================================================
+    // PRODUCTS
+    // ========================================================
+
+    section: {
+        marginTop: 30,
+    },
+
+    productScroll: {
+        paddingHorizontal: 20,
+    },
+
+    productItem: {
+        marginRight: 14,
+    },
 
     grid: {
-        flexDirection: 'row', flexWrap: 'wrap',
-        paddingHorizontal: 16, justifyContent: 'space-between', rowGap: 22,
+        paddingHorizontal: 16,
+
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+
+        justifyContent: 'space-between',
+
+        rowGap: 22,
     },
-    footerLinks: { flexDirection: 'row', justifyContent: 'center', gap: 24, paddingVertical: 26 },
-    link: { textDecorationLine: 'underline' },
+
+    gridItem: {
+        marginBottom: 2,
+    },
+
+
+    // ========================================================
+    // SALE
+    // ========================================================
+
+    saleStrip: {
+        marginHorizontal: 16,
+        marginTop: 30,
+
+        borderRadius: 20,
+
+        padding: 16,
+
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+
+    saleIcon: {
+        width: 44,
+        height: 44,
+
+        borderRadius: 22,
+
+        alignItems: 'center',
+        justifyContent: 'center',
+
+        marginRight: 12,
+    },
+
+    saleTextContainer: {
+        flex: 1,
+    },
+
+    saleTitle: {
+        color: '#FFFFFF',
+        fontSize: 13,
+        fontWeight: '900',
+        letterSpacing: 0.5,
+    },
+
+    saleSubtitle: {
+        color: '#AAA19A',
+        fontSize: 10,
+        marginTop: 3,
+    },
+
+
+    // ========================================================
+    // EMPTY
+    // ========================================================
+
+    emptyContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+
+        paddingHorizontal: 30,
+        paddingVertical: 60,
+    },
+
+    emptyIcon: {
+        width: 64,
+        height: 64,
+
+        borderRadius: 32,
+
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+
+    emptyTitle: {
+        fontSize: 17,
+        fontWeight: '800',
+        marginTop: 12,
+    },
+
+    emptyText: {
+        fontSize: 12,
+        textAlign: 'center',
+
+        marginTop: 6,
+
+        lineHeight: 18,
+    },
+
 })

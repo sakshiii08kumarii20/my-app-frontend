@@ -6,43 +6,63 @@ import {
     TouchableOpacity,
     ActivityIndicator,
     Alert,
-    useColorScheme,
 } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 
-import { Colors } from '../constans/Colors'
+import Colors from '../constans/Colors'
 import ThemeView from '../components/ThemeView'
+import { useAppTheme } from '../context/ThemeContext'
 import { useCart } from '../context/CartContext'
 
 const Payment = () => {
     const router = useRouter()
     const params = useLocalSearchParams()
-    const colorScheme = useColorScheme()
-    const theme = Colors[colorScheme] ?? Colors.light
+
+    // =====================================================
+    // THEME
+    // =====================================================
+
+    const { colorScheme } = useAppTheme()
+
+    const theme =
+        Colors[colorScheme] || Colors.light
+
+    // =====================================================
+    // CART
+    // =====================================================
 
     const { clearCart } = useCart()
 
     const [loading, setLoading] = useState(false)
 
+    // =====================================================
+    // TOTAL
+    // =====================================================
+
     const total = Number(params.total || 0)
+
+    // =====================================================
+    // TEST PAYMENT
+    // =====================================================
 
     const handleTestPayment = async () => {
         try {
             setLoading(true)
 
-            // TEST PAYMENT
-            // This does NOT charge a real card.
             const response = await fetch(
                 'http://192.168.0.131:4000/api/payments/test',
                 {
                     method: 'POST',
+
                     headers: {
                         'Content-Type': 'application/json',
                     },
+
                     body: JSON.stringify({
                         amount: total,
-                        payment_method: params.payment || 'test',
+                        payment_method:
+                            params.payment || 'test',
                     }),
                 }
             )
@@ -51,54 +71,105 @@ const Payment = () => {
 
             if (!response.ok || !data.success) {
                 throw new Error(
-                    data.message || 'Test payment failed'
+                    data.message ||
+                        'Test payment failed'
                 )
             }
 
+            // =================================================
+            // CREATE ORDER ID
+            // =================================================
+
             const orderId = data.payment_id
                 ? `ORD-${data.payment_id}`
-                : `ORD${Date.now().toString().slice(-8)}`
+                : `ORD${Date.now()
+                      .toString()
+                      .slice(-8)}`
 
-            const orderDate = new Date().toISOString()
+            const orderDate =
+                new Date().toISOString()
+
+            // =================================================
+            // CLEAR CART
+            // =================================================
 
             clearCart()
 
+            // =================================================
+            // GO TO ORDER CONFIRMATION
+            // =================================================
+
             router.replace({
                 pathname: '/order-confirmation',
+
                 params: {
                     orderId,
+
                     total: String(total),
-                    payment: params.payment || 'test',
+
+                    payment:
+                        params.payment ||
+                        'test',
+
                     date: orderDate,
-                    items: params.items || '[]',
+
+                    items:
+                        params.items ||
+                        '[]',
                 },
             })
         } catch (error) {
-            console.log('TEST PAYMENT ERROR:', error)
+            console.log(
+                'TEST PAYMENT ERROR:',
+                error
+            )
 
             Alert.alert(
                 'Payment Failed',
-                error.message || 'Unable to complete test payment.'
+                error.message ||
+                    'Unable to complete test payment.'
             )
         } finally {
             setLoading(false)
         }
     }
 
+    // =====================================================
+    // UI
+    // =====================================================
+
     return (
         <ThemeView style={styles.container}>
 
+            {/* =================================================
+                HEADER
+            ================================================= */}
+
             <View style={styles.header}>
-                <Ionicons
-                    name="card-outline"
-                    size={42}
-                    color={Colors.primary}
-                />
+
+                <View
+                    style={[
+                        styles.iconCircle,
+                        {
+                            backgroundColor:
+                                theme.accentLight ||
+                                theme.uiBackground,
+                        },
+                    ]}
+                >
+                    <Ionicons
+                        name="card-outline"
+                        size={34}
+                        color={theme.primary}
+                    />
+                </View>
 
                 <Text
                     style={[
                         styles.title,
-                        { color: theme.title },
+                        {
+                            color: theme.title,
+                        },
                     ]}
                 >
                     Test Payment
@@ -107,26 +178,42 @@ const Payment = () => {
                 <Text
                     style={[
                         styles.subtitle,
-                        { color: theme.subtitle },
+                        {
+                            color:
+                                theme.subtitle,
+                        },
                     ]}
                 >
                     Sandbox / Demo Payment
                 </Text>
+
             </View>
+
+
+            {/* =================================================
+                PAYMENT CARD
+            ================================================= */}
 
             <View
                 style={[
                     styles.card,
                     {
-                        backgroundColor: theme.card,
-                        borderColor: theme.border,
+                        backgroundColor:
+                            theme.card,
+
+                        borderColor:
+                            theme.border,
                     },
                 ]}
             >
+
                 <Text
                     style={[
                         styles.label,
-                        { color: theme.subtitle },
+                        {
+                            color:
+                                theme.subtitle,
+                        },
                     ]}
                 >
                     Amount to Pay
@@ -135,7 +222,10 @@ const Payment = () => {
                 <Text
                     style={[
                         styles.amount,
-                        { color: theme.title },
+                        {
+                            color:
+                                theme.title,
+                        },
                     ]}
                 >
                     ₹{total}
@@ -144,15 +234,24 @@ const Payment = () => {
                 <View
                     style={[
                         styles.divider,
-                        { backgroundColor: theme.border },
+                        {
+                            backgroundColor:
+                                theme.border,
+                        },
                     ]}
                 />
 
+                {/* PAYMENT METHOD */}
+
                 <View style={styles.row}>
+
                     <Text
                         style={[
                             styles.rowLabel,
-                            { color: theme.subtitle },
+                            {
+                                color:
+                                    theme.subtitle,
+                            },
                         ]}
                     >
                         Payment Method
@@ -161,86 +260,154 @@ const Payment = () => {
                     <Text
                         style={[
                             styles.rowValue,
-                            { color: theme.text },
+                            {
+                                color:
+                                    theme.text,
+                            },
                         ]}
                     >
                         Test Payment
                     </Text>
+
                 </View>
 
+
+                {/* ENVIRONMENT */}
+
                 <View style={styles.row}>
+
                     <Text
                         style={[
                             styles.rowLabel,
-                            { color: theme.subtitle },
+                            {
+                                color:
+                                    theme.subtitle,
+                            },
                         ]}
                     >
                         Environment
                     </Text>
 
-                    <Text
+                    <View
                         style={[
-                            styles.rowValue,
-                            { color: Colors.primary },
+                            styles.sandboxBadge,
+                            {
+                                backgroundColor:
+                                    theme.uiBackground,
+                            },
                         ]}
                     >
-                        SANDBOX
-                    </Text>
+                        <Text
+                            style={[
+                                styles.sandboxText,
+                                {
+                                    color:
+                                        theme.primary,
+                                },
+                            ]}
+                        >
+                            SANDBOX
+                        </Text>
+                    </View>
+
                 </View>
+
             </View>
+
+
+            {/* =================================================
+                INFORMATION BOX
+            ================================================= */}
 
             <View
                 style={[
                     styles.infoBox,
-                    { backgroundColor: theme.uiBackground },
+                    {
+                        backgroundColor:
+                            theme.uiBackground,
+
+                        borderColor:
+                            theme.border,
+                    },
                 ]}
             >
+
                 <Ionicons
                     name="information-circle-outline"
                     size={22}
-                    color={Colors.primary}
+                    color={theme.primary}
                 />
 
                 <Text
                     style={[
                         styles.infoText,
-                        { color: theme.text },
-                    ]}
-                >
-                    This is a test payment. No real money will
-                    be charged.
-                </Text>
-            </View>
-
-            <View style={styles.bottom}>
-                <TouchableOpacity
-                    disabled={loading}
-                    onPress={handleTestPayment}
-                    style={[
-                        styles.payButton,
                         {
-                            backgroundColor: loading
-                                ? theme.subtitle
-                                : Colors.primary,
+                            color:
+                                theme.text,
                         },
                     ]}
                 >
+                    This is a test payment. No real
+                    money will be charged.
+                </Text>
+
+            </View>
+
+
+            {/* =================================================
+                BOTTOM PAYMENT BUTTON
+            ================================================= */}
+
+            <View style={styles.bottom}>
+
+                <TouchableOpacity
+                    disabled={loading}
+                    onPress={handleTestPayment}
+                    activeOpacity={0.8}
+                    style={[
+                        styles.payButton,
+                        {
+                            backgroundColor:
+                                loading
+                                    ? theme.textMuted ||
+                                      theme.subtitle
+                                    : theme.primary,
+
+                            opacity:
+                                loading ? 0.7 : 1,
+                        },
+                    ]}
+                >
+
                     {loading ? (
-                        <ActivityIndicator color="#fff" />
+
+                        <ActivityIndicator
+                            color="#FFFFFF"
+                            size="small"
+                        />
+
                     ) : (
+
                         <>
                             <Ionicons
                                 name="lock-closed-outline"
                                 size={19}
-                                color="#fff"
+                                color="#FFFFFF"
                             />
 
-                            <Text style={styles.payText}>
+                            <Text
+                                style={
+                                    styles.payText
+                                }
+                            >
                                 Pay ₹{total}
                             </Text>
                         </>
+
                     )}
+
                 </TouchableOpacity>
+
             </View>
 
         </ThemeView>
@@ -249,11 +416,21 @@ const Payment = () => {
 
 export default Payment
 
+
+// =====================================================
+// STYLES
+// =====================================================
+
 const styles = StyleSheet.create({
+
     container: {
         flex: 1,
         padding: 18,
     },
+
+    // =================================================
+    // HEADER
+    // =================================================
 
     header: {
         alignItems: 'center',
@@ -261,16 +438,29 @@ const styles = StyleSheet.create({
         marginBottom: 25,
     },
 
+    iconCircle: {
+        width: 68,
+        height: 68,
+        borderRadius: 34,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 12,
+    },
+
     title: {
         fontSize: 24,
         fontWeight: '800',
-        marginTop: 12,
+        marginTop: 4,
     },
 
     subtitle: {
         fontSize: 14,
         marginTop: 5,
     },
+
+    // =================================================
+    // PAYMENT CARD
+    // =================================================
 
     card: {
         borderWidth: 1,
@@ -298,6 +488,7 @@ const styles = StyleSheet.create({
     row: {
         flexDirection: 'row',
         justifyContent: 'space-between',
+        alignItems: 'center',
         marginBottom: 12,
     },
 
@@ -310,12 +501,32 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
 
+    // =================================================
+    // SANDBOX BADGE
+    // =================================================
+
+    sandboxBadge: {
+        paddingHorizontal: 9,
+        paddingVertical: 4,
+        borderRadius: 6,
+    },
+
+    sandboxText: {
+        fontSize: 11,
+        fontWeight: '800',
+    },
+
+    // =================================================
+    // INFO
+    // =================================================
+
     infoBox: {
         flexDirection: 'row',
         alignItems: 'center',
         padding: 15,
         borderRadius: 12,
         marginTop: 20,
+        borderWidth: 1,
     },
 
     infoText: {
@@ -324,6 +535,10 @@ const styles = StyleSheet.create({
         fontSize: 13,
         lineHeight: 19,
     },
+
+    // =================================================
+    // BOTTOM
+    // =================================================
 
     bottom: {
         flex: 1,
@@ -340,9 +555,10 @@ const styles = StyleSheet.create({
     },
 
     payText: {
-        color: '#fff',
+        color: '#FFFFFF',
         fontSize: 16,
         fontWeight: '800',
         marginLeft: 8,
     },
+
 })
