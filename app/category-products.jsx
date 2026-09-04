@@ -1,6 +1,7 @@
+
 // app/category-products.jsx
 
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 
 import {
     View,
@@ -13,13 +14,17 @@ import {
 
 import { Ionicons } from '@expo/vector-icons'
 
-import { useLocalSearchParams, useRouter } from 'expo-router'
+import {
+    useLocalSearchParams,
+    useRouter,
+} from 'expo-router'
 
 import { useAppTheme } from '../context/ThemeContext'
 import Colors from '../constans/Colors'
 
-import { fetchProducts } from '../constans/api'
+import { useProducts } from '../context/ProductContext'
 
+import ProductCard from '../components/ProductCard'
 import ThemeView from '../components/ThemeView'
 import BottomNavBar from '../components/BottomNavBar'
 
@@ -32,16 +37,53 @@ const CategoryProducts = () => {
 
     const router = useRouter()
 
-    const { category } =
-        useLocalSearchParams()
+    const params = useLocalSearchParams()
+
+    const category = params.category
+
+
+    // =========================================================
+    // NORMALIZE CATEGORY
+    // =========================================================
+
+    const categoryName = React.useMemo(() => {
+
+        const value = Array.isArray(category)
+            ? category[0]
+            : category
+
+        if (!value) {
+            return ''
+        }
+
+        try {
+
+            return decodeURIComponent(
+                String(value)
+            )
+                .trim()
+                .toLowerCase()
+                .replace(/[-_]+/g, ' ')
+                .replace(/\s+/g, ' ')
+
+        } catch {
+
+            return String(value)
+                .trim()
+                .toLowerCase()
+                .replace(/[-_]+/g, ' ')
+                .replace(/\s+/g, ' ')
+
+        }
+
+    }, [category])
 
 
     // =========================================================
     // THEME
     // =========================================================
 
-    const { colorScheme } =
-        useAppTheme()
+    const { colorScheme } = useAppTheme()
 
     const currentScheme =
         colorScheme === 'dark'
@@ -54,92 +96,115 @@ const CategoryProducts = () => {
 
 
     // =========================================================
-    // STATE
+    // PRODUCTS
     // =========================================================
 
-    const [products, setProducts] =
-        useState([])
-
-    const [loading, setLoading] =
-        useState(true)
-
-    const [error, setError] =
-        useState('')
+    const {
+        products: allProducts,
+        loading,
+        error,
+        refreshProducts,
+    } = useProducts()
 
 
     // =========================================================
-    // LOAD PRODUCTS
+    // FILTER PRODUCTS
     // =========================================================
 
-    useEffect(() => {
+    const products = React.useMemo(() => {
 
-        loadProducts()
-
-    }, [])
-
-
-    const loadProducts = async () => {
-
-        try {
-
-            setLoading(true)
-            setError('')
-
-            const data =
-                await fetchProducts()
-
-            const categoryName =
-                Array.isArray(category)
-                    ? category[0]
-                    : category
-
-            const filtered =
-                (data || []).filter(
-                    (product) =>
-                        (
-                            product.category ||
-                            'Other'
-                        ).trim() ===
-                        categoryName
-                )
-
-            setProducts(filtered)
-
-        } catch (err) {
-
-            console.error(
-                'Category products error:',
-                err
-            )
-
-            setError(
-                'Unable to load products.'
-            )
-
-        } finally {
-
-            setLoading(false)
-
+        if (!Array.isArray(allProducts)) {
+            return []
         }
-    }
+
+        // If no category exists,
+        // show all products.
+        if (!categoryName) {
+            return allProducts
+        }
+
+        return allProducts.filter((product) => {
+
+            if (!product?.category) {
+                return false
+            }
+
+            const normalizedProductCategory =
+                String(product.category)
+                    .trim()
+                    .toLowerCase()
+                    .replace(/[-_]+/g, ' ')
+                    .replace(/\s+/g, ' ')
+
+            return (
+                normalizedProductCategory ===
+                categoryName
+            )
+
+        })
+
+    }, [
+        allProducts,
+        categoryName,
+    ])
+
+
+    // =========================================================
+    // DEBUG
+    // =========================================================
+
+    React.useEffect(() => {
+
+        console.log(
+            '================================'
+        )
+
+        console.log(
+            'CATEGORY SCREEN:',
+            category
+        )
+
+        console.log(
+            'CATEGORY NORMALIZED:',
+            categoryName
+        )
+
+        console.log(
+            'ALL PRODUCTS:',
+            allProducts?.length || 0
+        )
+
+        console.log(
+            'FILTERED PRODUCTS:',
+            products.length
+        )
+
+        console.log(
+            'FILTERED PRODUCT NAMES:',
+            products.map(
+                (product) => product.name
+            )
+        )
+
+        console.log(
+            '================================'
+        )
+
+    }, [
+        category,
+        categoryName,
+        allProducts,
+        products,
+    ])
 
 
     // =========================================================
     // PRODUCT CARD
     // =========================================================
 
-    const renderProduct = ({ item }) => {
-
-        const discount =
-            item.mrp > item.price
-                ? Math.round(
-                    (
-                        (item.mrp - item.price) /
-                        item.mrp
-                    ) * 100
-                )
-                : 0
-
+    const renderProduct = ({
+        item,
+    }) => {
 
         return (
 
@@ -151,14 +216,13 @@ const CategoryProducts = () => {
                 }
                 style={({ pressed }) => [
 
-                    styles.productCard,
+                    styles.productWrapper,
 
                     {
-                        backgroundColor:
-                            theme.card,
-
-                        borderColor:
-                            theme.border,
+                        opacity:
+                            pressed
+                                ? 0.92
+                                : 1,
 
                         transform: [
                             {
@@ -169,172 +233,20 @@ const CategoryProducts = () => {
                             },
                         ],
                     },
+
                 ]}
             >
 
-                {/* =================================================
-                    PRODUCT ICON / IMAGE AREA
-                ================================================= */}
-
-                <View
-                    style={[
-                        styles.productImage,
-                        {
-                            backgroundColor:
-                                theme.surfaceSoft,
-                        },
-                    ]}
-                >
-
-                    <Ionicons
-                        name="cube-outline"
-                        size={42}
-                        color={
-                            theme.primary
-                        }
-                    />
-
-                </View>
-
-
-                {/* =================================================
-                    PRODUCT INFO
-                ================================================= */}
-
-                <View
-                    style={
-                        styles.productInfo
-                    }
-                >
-
-                    <Text
-                        numberOfLines={2}
-                        style={[
-                            styles.productName,
-                            {
-                                color:
-                                    theme.title,
-                            },
-                        ]}
-                    >
-                        {item.name}
-                    </Text>
-
-
-                    {/* PRICE */}
-
-                    <View
-                        style={
-                            styles.priceRow
-                        }
-                    >
-
-                        <Text
-                            style={[
-                                styles.price,
-                                {
-                                    color:
-                                        theme.primary,
-                                },
-                            ]}
-                        >
-                            ₹{item.price}
-                        </Text>
-
-
-                        {item.mrp >
-                            item.price && (
-
-                            <Text
-                                style={[
-                                    styles.mrp,
-                                    {
-                                        color:
-                                            theme.textMuted,
-                                    },
-                                ]}
-                            >
-                                ₹{item.mrp}
-                            </Text>
-
-                        )}
-
-                    </View>
-
-
-                    {/* DISCOUNT */}
-
-                    {discount > 0 && (
-
-                        <View
-                            style={[
-                                styles.discountBadge,
-                                {
-                                    backgroundColor:
-                                        theme.primary,
-                                },
-                            ]}
-                        >
-
-                            <Text
-                                style={
-                                    styles.discountText
-                                }
-                            >
-                                {discount}% OFF
-                            </Text>
-
-                        </View>
-
-                    )}
-
-
-                    {/* UNIT */}
-
-                    {item.unit && (
-
-                        <Text
-                            style={[
-                                styles.unit,
-                                {
-                                    color:
-                                        theme.subtitle,
-                                },
-                            ]}
-                        >
-                            {item.unit}
-                        </Text>
-
-                    )}
-
-                </View>
-
-
-                {/* ARROW */}
-
-                <View
-                    style={[
-                        styles.arrowButton,
-                        {
-                            backgroundColor:
-                                theme.uiBackground,
-                        },
-                    ]}
-                >
-
-                    <Ionicons
-                        name="arrow-forward"
-                        size={17}
-                        color={
-                            theme.primary
-                        }
-                    />
-
-                </View>
+                <ProductCard
+                    item={item}
+                    theme={theme}
+                    cardWidth={165}
+                />
 
             </Pressable>
 
         )
+
     }
 
 
@@ -365,7 +277,6 @@ const CategoryProducts = () => {
                 }
             />
 
-
             <Text
                 style={[
                     styles.emptyTitle,
@@ -377,7 +288,6 @@ const CategoryProducts = () => {
             >
                 No products found
             </Text>
-
 
             <Text
                 style={[
@@ -476,7 +386,10 @@ const CategoryProducts = () => {
                             },
                         ]}
                     >
-                        {category || 'Products'}
+                        {Array.isArray(category)
+                            ? category[0]
+                            : category ||
+                              'Products'}
                     </Text>
 
 
@@ -492,6 +405,7 @@ const CategoryProducts = () => {
                             ]}
                         >
                             {products.length}{' '}
+
                             {products.length === 1
                                 ? 'product'
                                 : 'products'}
@@ -523,7 +437,6 @@ const CategoryProducts = () => {
                         }
                     />
 
-
                     <Text
                         style={[
                             styles.loadingText,
@@ -546,7 +459,7 @@ const CategoryProducts = () => {
             ================================================= */}
 
             {!loading &&
-                error !== '' && (
+                error && (
 
                     <View
                         style={
@@ -586,10 +499,9 @@ const CategoryProducts = () => {
                             {error}
                         </Text>
 
-
                         <Pressable
                             onPress={
-                                loadProducts
+                                refreshProducts
                             }
                             style={[
                                 styles.retryButton,
@@ -620,28 +532,42 @@ const CategoryProducts = () => {
             ================================================= */}
 
             {!loading &&
-                error === '' && (
+                !error && (
 
                     <FlatList
                         data={products}
-                        keyExtractor={(item) =>
-                            String(item.id)
+
+                        keyExtractor={(item, index) =>
+                            String(
+                                item?.id ??
+                                item?.product_id ??
+                                index
+                            )
                         }
+
                         renderItem={
                             renderProduct
                         }
+
                         numColumns={2}
+
                         columnWrapperStyle={
-                            styles.row
+                            products.length > 1
+                                ? styles.row
+                                : undefined
                         }
+
                         contentContainerStyle={[
                             styles.list,
+
                             products.length === 0 &&
                                 styles.emptyList,
                         ]}
+
                         showsVerticalScrollIndicator={
                             false
                         }
+
                         ListEmptyComponent={
                             EmptyState
                         }
@@ -659,6 +585,7 @@ const CategoryProducts = () => {
         </ThemeView>
 
     )
+
 }
 
 
@@ -739,7 +666,7 @@ const styles = StyleSheet.create({
     // =========================================================
 
     list: {
-        padding: 20,
+        padding: 16,
         paddingBottom: 120,
     },
 
@@ -751,105 +678,8 @@ const styles = StyleSheet.create({
     },
 
 
-    productCard: {
+    productWrapper: {
         width: '48%',
-
-        borderWidth: 1,
-        borderRadius: 18,
-
-        overflow: 'hidden',
-    },
-
-
-    productImage: {
-        height: 125,
-
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-
-
-    productInfo: {
-        padding: 12,
-        paddingBottom: 15,
-    },
-
-
-    productName: {
-        fontSize: 14,
-        fontWeight: '800',
-
-        lineHeight: 19,
-
-        minHeight: 38,
-    },
-
-
-    priceRow: {
-        flexDirection: 'row',
-
-        alignItems: 'center',
-
-        marginTop: 8,
-    },
-
-
-    price: {
-        fontSize: 16,
-        fontWeight: '800',
-    },
-
-
-    mrp: {
-        fontSize: 11,
-
-        textDecorationLine:
-            'line-through',
-
-        marginLeft: 7,
-    },
-
-
-    discountBadge: {
-        alignSelf: 'flex-start',
-
-        borderRadius: 6,
-
-        paddingHorizontal: 6,
-        paddingVertical: 3,
-
-        marginTop: 7,
-    },
-
-
-    discountText: {
-        color: '#FFFFFF',
-
-        fontSize: 8,
-        fontWeight: '800',
-    },
-
-
-    unit: {
-        fontSize: 10,
-
-        marginTop: 6,
-    },
-
-
-    arrowButton: {
-        position: 'absolute',
-
-        right: 9,
-        bottom: 9,
-
-        width: 30,
-        height: 30,
-
-        borderRadius: 15,
-
-        alignItems: 'center',
-        justifyContent: 'center',
     },
 
 
@@ -889,6 +719,8 @@ const styles = StyleSheet.create({
 
         alignItems: 'center',
         justifyContent: 'center',
+
+        marginTop: 30,
     },
 
 
@@ -939,3 +771,4 @@ const styles = StyleSheet.create({
     },
 
 })
+

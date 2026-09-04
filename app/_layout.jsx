@@ -15,6 +15,7 @@ import Colors from '../constans/Colors'
 import { CartProvider } from '../context/CartContext'
 import { ThemeProvider, useAppTheme } from '../context/ThemeContext'
 import FloatingCart from '../components/FloatingCart'
+import { ProductProvider } from '../context/ProductContext'
 
 // Keep the native splash screen visible until fonts (and theme) are ready
 SplashScreen.preventAutoHideAsync()
@@ -282,20 +283,17 @@ const RootLayout = () => {
 
     return (
         <SafeAreaProvider>
-            <ThemeProvider>
-                <CartProvider>
-
-                    <View style={{ flex: 1 }}>
-
-                        <AppNavigator />
-
-                        <FloatingCart />
-
-                    </View>
-
-                </CartProvider>
-            </ThemeProvider>
-        </SafeAreaProvider>
+    <ThemeProvider>
+        <CartProvider>
+            <ProductProvider>
+                <View style={{ flex: 1 }}>
+                    <AppNavigator />
+                    <FloatingCart />
+                </View>
+            </ProductProvider>
+        </CartProvider>
+    </ThemeProvider>
+</SafeAreaProvider>
     )
 }
 

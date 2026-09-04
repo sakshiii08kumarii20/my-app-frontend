@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 
 import {
     StyleSheet,
@@ -20,7 +20,7 @@ import ThemeView from '../components/ThemeView'
 import ProductCard from '../components/ProductCard'
 import BottomNavBar from '../components/BottomNavBar'
 
-import { fetchProducts } from '../constans/api'
+import { useProducts } from '../context/ProductContext'
 import { useCart } from '../context/CartContext'
 
 const { width } = Dimensions.get('window')
@@ -36,24 +36,16 @@ const CATEGORIES = [
         icon: 'woman-outline',
     },
     {
-        name: 'Men',
+        name: 'Mens',
         icon: 'man-outline',
     },
     {
-        name: 'Shoes',
-        icon: 'footsteps-outline',
+        name: 'Food Products',
+        icon: 'restaurant-outline',
     },
     {
-        name: 'Bags',
-        icon: 'briefcase-outline',
-    },
-    {
-        name: 'Accessories',
-        icon: 'watch-outline',
-    },
-    {
-        name: 'Kids',
-        icon: 'happy-outline',
+        name: 'Event Menu',
+        icon: 'restaurant-outline',
     },
 ]
 
@@ -195,64 +187,17 @@ const Home = () => {
 
     const router = useRouter()
 
+
+    const {
+    products,
+    loading,
+    error,
+    refreshProducts,
+} = useProducts()
+
     const [activeCategory, setActiveCategory] =
         useState('Women')
 
-    const [products, setProducts] =
-        useState([])
-
-    const [loading, setLoading] =
-        useState(true)
-
-    const [error, setError] =
-        useState(false)
-
-
-    // ========================================================
-    // LOAD PRODUCTS
-    // ========================================================
-
-    useEffect(() => {
-
-        let mounted = true
-
-        fetchProducts()
-            .then((data) => {
-
-                if (!mounted) return
-
-                setProducts(
-                    Array.isArray(data)
-                        ? data
-                        : []
-                )
-
-            })
-            .catch((err) => {
-
-                console.log(
-                    'HOME PRODUCTS ERROR:',
-                    err
-                )
-
-                if (mounted) {
-                    setError(true)
-                }
-
-            })
-            .finally(() => {
-
-                if (mounted) {
-                    setLoading(false)
-                }
-
-            })
-
-        return () => {
-            mounted = false
-        }
-
-    }, [])
 
 
     // ========================================================
@@ -385,50 +330,28 @@ const Home = () => {
                 </Text>
 
                 <TouchableOpacity
-                    activeOpacity={0.85}
-                    onPress={() => {
-
-                        setError(false)
-                        setLoading(true)
-
-                        fetchProducts()
-                            .then((data) => {
-                                setProducts(
-                                    Array.isArray(data)
-                                        ? data
-                                        : []
-                                )
-                            })
-                            .catch(() => {
-                                setError(true)
-                            })
-                            .finally(() => {
-                                setLoading(false)
-                            })
-
-                    }}
-                    style={[
-                        styles.retryButton,
-                        {
-                            backgroundColor:
-                                theme.primary,
-                        },
-                    ]}
-                >
-
-                    <Text
-                        style={[
-                            styles.retryButtonText,
-                            {
-                                color:
-                                    theme.buttonPrimaryText,
-                            },
-                        ]}
-                    >
-                        Try Again
-                    </Text>
-
-                </TouchableOpacity>
+    activeOpacity={0.85}
+    onPress={refreshProducts}
+    style={[
+        styles.retryButton,
+        {
+            backgroundColor:
+                theme.primary,
+        },
+    ]}
+>
+    <Text
+        style={[
+            styles.retryButtonText,
+            {
+                color:
+                    theme.buttonPrimaryText,
+            },
+        ]}
+    >
+        Try Again
+    </Text>
+</TouchableOpacity>
 
             </ThemeView>
         )
@@ -758,11 +681,16 @@ const Home = () => {
                                         activeOpacity={
                                             0.8
                                         }
-                                        onPress={() =>
-                                            setActiveCategory(
-                                                category.name
-                                            )
-                                        }
+                                        onPress={() => {
+    setActiveCategory(category.name)
+
+    router.push({
+        pathname: '/category-products',
+        params: {
+            category: category.name,
+        },
+    })
+}}
                                         style={[
                                             styles.categoryCard,
                                             {

@@ -18,6 +18,7 @@ import { fetchProductById } from '../../constans/api'
 
 import { useCart } from '../../context/CartContext'
 import { useAppTheme } from '../../context/ThemeContext'
+import { useProducts } from '../../context/ProductContext'
 
 import ThemeView from '../../components/ThemeView'
 
@@ -80,6 +81,10 @@ const ProductDetail = () => {
 
     const { addItem } = useCart()
 
+const {
+    products: allProducts,
+} = useProducts()
+
 
     // =========================================================
     // LOAD PRODUCT
@@ -87,43 +92,92 @@ const ProductDetail = () => {
 
     useEffect(() => {
 
-        let mounted = true
+    let mounted = true
 
-        setLoading(true)
+    const productId = Array.isArray(id)
+        ? id[0]
+        : id
 
-        fetchProductById(id)
-            .then((data) => {
+    // =====================================================
+    // FIRST: FIND PRODUCT IN PRODUCT CONTEXT
+    // =====================================================
 
-                if (mounted) {
-                    setProduct(data)
-                }
+    const cachedProduct =
+        Array.isArray(allProducts)
+            ? allProducts.find(
+                (item) =>
+                    String(item.id) ===
+                    String(productId)
+            )
+            : null
 
-            })
-            .catch((error) => {
 
-                console.log(
-                    'PRODUCT DETAIL ERROR:',
-                    error
-                )
+    if (cachedProduct) {
 
-                if (mounted) {
-                    setProduct(null)
-                }
+        console.log(
+            'PRODUCT DETAIL: Loaded from ProductContext',
+            cachedProduct.name
+        )
 
-            })
-            .finally(() => {
-
-                if (mounted) {
-                    setLoading(false)
-                }
-
-            })
+        setProduct(cachedProduct)
+        setLoading(false)
 
         return () => {
             mounted = false
         }
+    }
 
-    }, [id])
+
+    // =====================================================
+    // FALLBACK: FETCH FROM API
+    // =====================================================
+
+    console.log(
+        'PRODUCT DETAIL: Product not in context, fetching API...'
+    )
+
+    setLoading(true)
+
+    fetchProductById(productId)
+        .then((data) => {
+
+            if (mounted) {
+
+                console.log(
+                    'PRODUCT DETAIL: Loaded from API',
+                    data?.name
+                )
+
+                setProduct(data)
+            }
+
+        })
+        .catch((error) => {
+
+            console.log(
+                'PRODUCT DETAIL ERROR:',
+                error
+            )
+
+            if (mounted) {
+                setProduct(null)
+            }
+
+        })
+        .finally(() => {
+
+            if (mounted) {
+                setLoading(false)
+            }
+
+        })
+
+
+    return () => {
+        mounted = false
+    }
+
+}, [id, allProducts])
 
 
     // =========================================================

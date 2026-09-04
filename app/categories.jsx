@@ -1,7 +1,7 @@
 // app/categories.jsx
 
 import React, {
-    useEffect,
+   
     useMemo,
     useState,
 } from 'react'
@@ -23,7 +23,7 @@ import { useRouter } from 'expo-router'
 import { useAppTheme } from '../context/ThemeContext'
 import Colors from '../constans/Colors'
 
-import { fetchProducts } from '../constans/api'
+import { useProducts } from '../context/ProductContext'
 
 import ThemeView from '../components/ThemeView'
 import BottomNavBar from '../components/BottomNavBar'
@@ -57,58 +57,18 @@ const Categories = () => {
     // STATE
     // =========================================================
 
-    const [products, setProducts] =
-        useState([])
-
-    const [loading, setLoading] =
-        useState(true)
-
-    const [error, setError] =
-        useState('')
+        
 
     const [search, setSearch] =
         useState('')
 
-
-    // =========================================================
-    // LOAD PRODUCTS
-    // =========================================================
-
-    useEffect(() => {
-        loadProducts()
-    }, [])
-
-
-    const loadProducts = async () => {
-
-        try {
-
-            setLoading(true)
-            setError('')
-
-            const data =
-                await fetchProducts()
-
-            setProducts(data || [])
-
-        } catch (err) {
-
-            console.error(
-                'Categories API error:',
-                err
-            )
-
-            setError(
-                'Unable to load categories.'
-            )
-
-        } finally {
-
-            setLoading(false)
-
-        }
-
-    }
+    const {
+    products,
+    loading,
+    error,
+    refreshProducts,
+} = useProducts()
+   
 
 
     // =========================================================
@@ -503,7 +463,7 @@ const Categories = () => {
                 ================================================= */}
 
                 {!loading &&
-                    error !== '' && (
+                    error  && (
 
                         <View
                             style={[
@@ -555,8 +515,8 @@ const Categories = () => {
 
                             <Pressable
                                 onPress={
-                                    loadProducts
-                                }
+                             refreshProducts
+                         }
                                 style={[
                                     styles.retryButton,
                                     {
@@ -586,7 +546,7 @@ const Categories = () => {
                 ================================================= */}
 
                 {!loading &&
-                    error === '' && (
+                    !error && (
 
                         <View
                             style={
