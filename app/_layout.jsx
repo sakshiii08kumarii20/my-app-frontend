@@ -5,14 +5,23 @@ import {
 } from 'react-native'
 import { Stack, Link } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
+import { useFonts } from 'expo-font'
+import * as SplashScreen from 'expo-splash-screen'
+import { useEffect } from 'react'
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context'
+import { Platform } from 'react-native'
 
 import Colors from '../constans/Colors'
 import { CartProvider } from '../context/CartContext'
 import { ThemeProvider, useAppTheme } from '../context/ThemeContext'
 import FloatingCart from '../components/FloatingCart'
 
+// Keep the native splash screen visible until fonts (and theme) are ready
+SplashScreen.preventAutoHideAsync()
+
 const AppNavigator = () => {
     const { colorScheme } = useAppTheme()
+    const insets = useSafeAreaInsets()
 
     const theme =
         Colors[colorScheme] || Colors.light
@@ -57,6 +66,16 @@ const AppNavigator = () => {
                     },
 
                     headerShadowVisible: false,
+
+                    // Explicitly tell the native header how tall the status
+                    // bar is, using the REAL device inset. Expo Go's
+                    // edge-to-edge handling on Android doesn't always apply
+                    // this correctly on its own, which is what was pushing
+                    // the header (and back arrow) off-screen.
+                    headerStatusBarHeight:
+                        Platform.OS === 'android'
+                            ? insets.top
+                            : undefined,
 
                     contentStyle: {
                         backgroundColor:
@@ -246,20 +265,37 @@ const AppNavigator = () => {
 =============================================================== */
 
 const RootLayout = () => {
+    // Wait for the icon font to be ready before rendering anything —
+    // this is what was causing the profile icon (and bottom bar icons)
+    // to be invisible/misaligned on first load.
+    const [fontsLoaded] = useFonts(Ionicons.font)
+
+    useEffect(() => {
+        if (fontsLoaded) {
+            SplashScreen.hideAsync()
+        }
+    }, [fontsLoaded])
+
+    if (!fontsLoaded) {
+        return null
+    }
+
     return (
-        <ThemeProvider>
-            <CartProvider>
+        <SafeAreaProvider>
+            <ThemeProvider>
+                <CartProvider>
 
-                <View style={{ flex: 1 }}>
+                    <View style={{ flex: 1 }}>
 
-                    <AppNavigator />
+                        <AppNavigator />
 
-                    <FloatingCart />
+                        <FloatingCart />
 
-                </View>
+                    </View>
 
-            </CartProvider>
-        </ThemeProvider>
+                </CartProvider>
+            </ThemeProvider>
+        </SafeAreaProvider>
     )
 }
 

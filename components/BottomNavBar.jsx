@@ -8,6 +8,7 @@ import {
 } from 'react-native'
 import { useRouter, usePathname } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import Colors from '../constans/Colors'
 import { useAppTheme } from '../context/ThemeContext'
@@ -45,6 +46,7 @@ const TABS = [
 
 const BottomNavBar = () => {
     const { colorScheme } = useAppTheme()
+    const insets = useSafeAreaInsets()
 
     const theme =
         Colors[colorScheme] || Colors.light
@@ -91,6 +93,12 @@ const BottomNavBar = () => {
 
                     borderTopColor:
                         borderColor,
+
+                    // Add the device's real bottom inset (home
+                    // indicator / gesture nav) on top of the base
+                    // padding, instead of a fixed value that only
+                    // worked on some phones.
+                    paddingBottom: 12 + insets.bottom,
                 },
             ]}
         >
@@ -201,7 +209,8 @@ const styles = StyleSheet.create({
         borderTopWidth: 1,
 
         paddingTop: 7,
-        paddingBottom: 12,
+        // paddingBottom is now set dynamically above using
+        // safe-area insets — do not hardcode it here.
 
         minHeight: 70,
 
